@@ -1,7 +1,7 @@
 """Monthly budget comparisons with explicit unset and zero-budget semantics."""
 
-from decimal import Decimal, ROUND_HALF_UP
 import math
+from decimal import ROUND_HALF_UP, Decimal
 
 import pandas as pd
 
@@ -36,5 +36,7 @@ def category_budget_analysis(frame: pd.DataFrame, month: str, budgets: dict) -> 
     records = []
     for category in categories:
         values = monthly.loc[monthly["category"] == category, "amount"]
-        records.append({"category": category, **compare_budget(spending_total(values), budgets.get(category))})
+        records.append(
+            {"category": category, **compare_budget(spending_total(values), budgets.get(category))}
+        )
     return pd.DataFrame(records, columns=["category", "actual", "budget", "remaining", "status"])

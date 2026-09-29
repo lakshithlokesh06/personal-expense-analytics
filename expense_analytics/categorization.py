@@ -26,8 +26,9 @@ def suggest_category(description: str) -> tuple[str, str | None]:
     return "Uncategorized", None
 
 
-def categorize_transactions(frame: pd.DataFrame, replace_existing: bool = False
-                            ) -> tuple[pd.DataFrame, pd.DataFrame]:
+def categorize_transactions(
+    frame: pd.DataFrame, replace_existing: bool = False
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Fill unknown categories, optionally replace matched existing labels.
 
     Unmatched existing labels remain intact. Return a separate audit for review.
@@ -40,9 +41,18 @@ def categorize_transactions(frame: pd.DataFrame, replace_existing: bool = False
         unknown = row.category.strip().casefold() in ("", "uncategorized", "uncategorised")
         assigned = suggested if unknown or (replace_existing and keyword) else row.category
         categories.append(assigned)
-        audit.append({"Description": row.description, "Original category": row.category,
-                      "Category": assigned, "Matched keyword": keyword or "No match",
-                      "Decision": "Rule applied" if keyword and (unknown or replace_existing)
-                      else "No match" if unknown else "Existing category kept"})
+        audit.append(
+            {
+                "Description": row.description,
+                "Original category": row.category,
+                "Category": assigned,
+                "Matched keyword": keyword or "No match",
+                "Decision": "Rule applied"
+                if keyword and (unknown or replace_existing)
+                else "No match"
+                if unknown
+                else "Existing category kept",
+            }
+        )
     result["category"] = categories
     return result, pd.DataFrame(audit)

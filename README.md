@@ -8,7 +8,7 @@ or external categorization service is used.
 
 ## Run locally
 
-Use Python 3.11 or newer. From the project directory:
+Use Python 3.12–3.14 (release validated locally with Python 3.14). From the project directory:
 
 ```bash
 python3 -m venv .venv
@@ -24,6 +24,51 @@ Stop the server with Ctrl+C.
 
 The app starts with sample expenses. Select **Upload CSV** to use your own file.
 A downloadable sample is available under **CSV format guide**.
+
+## Quick tour
+
+1. Start with **Sample expenses** to explore 12 fictional transactions.
+2. Select a date range or categories, inspect the charts, then use **Reset filters**.
+3. Select **Upload CSV** to load your own data; validation errors explain what to fix.
+4. Open the categorization review to inspect matched keywords before enabling replacement.
+5. Enter a monthly budget, then optional category limits. Clear a limit to remove it.
+6. Open **About this project** for methodology, stack, and limitations.
+
+The sample's net spending is **1,520.89**, average transaction **126.74**, highest
+expense **1,200.00**, and transaction count **12**. Its dates span one month, so the
+monthly trend contains one point.
+
+## Tech stack and design
+
+| Layer | Tools / responsibility |
+| --- | --- |
+| Interface | Streamlit widgets, native layout, loading and recovery states |
+| Data | pandas and NumPy for validated transactions and aggregations |
+| Charts | Altair with hover details, pan, and zoom |
+| Rules | Ordered keyword matching; no machine learning or network service |
+| Quality | unittest, Streamlit AppTest, coverage, Ruff, GitHub Actions |
+
+Pure calculation modules are independent of Streamlit. The entry point coordinates
+loading, categorization, dashboard rendering, and the separate budget workspace.
+Runtime dependencies are pinned to the versions tested for this release. These are
+direct dependency pins, not a complete transitive lockfile. Developer tools are
+separate in `requirements-dev.txt`.
+
+## Limitations and privacy
+
+This is a local portfolio application, not an accounting system. Use one currency
+per file. There is no exchange-rate conversion, bank integration, authentication,
+or persistent database. Keyword rules may misclassify ambiguous descriptions.
+Duplicate rows are retained; missing dates do not prove zero spending. The preview
+is capped at 100 rows, while calculations use all validated rows. Amounts are
+stored as numeric values and displayed to two decimals; budgets use half-up
+rounding. Budget comparisons are based on the file, not forecasts.
+
+Uploads remain in process memory; the application does not save them to disk or
+send them to an external analytics service. Streamlit usage telemetry is disabled.
+Budget settings live only in the active session. Do not commit real expense data;
+the sample is fictional. This project has not been deployed or published by the
+local release process.
 
 ## Dashboard
 
@@ -156,7 +201,12 @@ tests/test_app.py            # Streamlit dashboard and filter tests
 tests/test_analytics.py      # Calculation and analytics edge cases
 tests/test_smart_features.py # Rules, budgets, and insights
 tests/test_smart_ui.py       # Budget state, alerts, and categorization integration
-requirements.txt            # Runtime dependencies
+requirements.txt            # Pinned runtime dependencies
+requirements-dev.txt        # Lint and coverage tools
+pyproject.toml              # Ruff and coverage settings
+.github/workflows/tests.yml # GitHub checks on Python 3.12 and 3.14
+tests/test_release.py        # Loading/error recovery and full app checks
+RELEASE_CHECKLIST.md         # Local validation results and release notes
 .gitignore
 README.md
 ```
@@ -166,11 +216,43 @@ add presentation components to `ui.py` or new focused modules as the app grows.
 
 ## Verification
 
-After installing dependencies:
+For the standard test suite, after installing runtime dependencies:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+For the release checks:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pip check
+python -m ruff check .
+python -m ruff format --check .
+python -m coverage run -m unittest discover -s tests -v
+python -m coverage report
+```
+
+Coverage includes branches and enforces an 85% minimum. The GitHub Actions workflow
+runs these checks on pushes and pull requests; its remote run is separate from local
+validation. See `RELEASE_CHECKLIST.md` for the last locally verified results.
+
+## Troubleshooting
+
+- **Missing package:** activate `.venv` and rerun `python -m pip install -r requirements.txt`.
+- **Port already in use:** run `python -m streamlit run app.py --server.port 8502`.
+- **Invalid CSV:** use UTF-8, comma separators, ISO dates, and numeric amounts;
+  the entire file is rejected until invalid rows are corrected.
+- **Missing sample:** restore `data/sample_expenses.csv` or switch to **Upload CSV**.
+- **No matching transactions:** choose categories, adjust dates, or reset filters.
+- **Budget disappeared:** budgets are session-only; reloads or server restarts can clear them.
+
+## GitHub preparation
+
+Run the release checks before pushing. Include source, tests, configuration, and the
+fictional sample. `.gitignore` excludes virtual environments, tool caches, secrets,
+and local datasets under `data/` (except the sample). Add ignore rules for any private
+files placed elsewhere. The GitHub workflow will run once the repository is pushed.
 
 UI components use the official [Streamlit APIs](https://docs.streamlit.io/develop/api-reference),
 including [interactive Altair charts](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart).

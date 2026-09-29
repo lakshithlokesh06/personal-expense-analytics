@@ -7,7 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-REQUIRED_COLUMNS = ("date", "description", "category", "amount")
+EXPENSE_COLUMNS = ("date", "description", "category", "amount")
+REQUIRED_COLUMNS = ("date", "description", "amount")
 SAMPLE_PATH = Path(__file__).resolve().parent.parent / "data" / "sample_expenses.csv"
 MAX_FILE_BYTES = 5 * 1024 * 1024
 
@@ -34,11 +35,13 @@ def load_expenses(content: bytes) -> pd.DataFrame:
         reader = csv.reader(io.StringIO(text, newline=""), strict=True)
         header = next(reader, None)
         if not header:
-            raise ExpenseValidationError("The CSV is empty. Add a header and at least one transaction.")
+            raise ExpenseValidationError(
+                "The CSV is empty. Add a header and at least one transaction."
+            )
         columns = [name.strip().lower() for name in header]
         if any(not name for name in columns) or len(columns) != len(set(columns)):
             raise ExpenseValidationError("Column names must be non-empty and unique.")
-        missing = (set(REQUIRED_COLUMNS) - {"category"}) - set(columns)
+        missing = set(REQUIRED_COLUMNS) - set(columns)
         if missing:
             raise ExpenseValidationError(f"Missing required columns: {', '.join(sorted(missing))}.")
         rows = []
@@ -58,7 +61,7 @@ def load_expenses(content: bytes) -> pd.DataFrame:
     frame = pd.DataFrame(rows, columns=columns)
     if "category" not in frame:
         frame["category"] = "Uncategorized"
-    frame = frame.loc[:, list(REQUIRED_COLUMNS)]
+    frame = frame.loc[:, list(EXPENSE_COLUMNS)]
     frame = frame.apply(lambda column: column.str.strip())
     frame["category"] = frame["category"].replace("", "Uncategorized")
     errors = []
@@ -74,7 +77,9 @@ def load_expenses(content: bytes) -> pd.DataFrame:
     amounts = pd.to_numeric(frame["amount"], errors="coerce")
     invalid_amounts = ~np.isfinite(amounts)
     if invalid_amounts.any():
-        errors.append(f"amount: {int(invalid_amounts.sum())} invalid value(s); use finite numbers without currency symbols")
+        errors.append(
+            f"amount: {int(invalid_amounts.sum())} invalid value(s); use finite numbers without currency symbols"
+        )
     if errors:
         raise ExpenseValidationError("Please correct the CSV: " + "; ".join(errors) + ".")
     frame["date"] = dates

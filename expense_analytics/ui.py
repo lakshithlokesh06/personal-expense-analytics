@@ -9,7 +9,7 @@ from expense_analytics.data import SAMPLE_PATH
 def render_header() -> None:
     st.caption("PERSONAL FINANCE · EXPENSE WORKSPACE")
     st.title("Personal Expense Analytics")
-    st.write("Bring your expenses together. Upload a CSV and review your transactions.")
+    st.write("Bring your expenses together. Explore your spending by category and month.")
 
 
 def render_csv_guide() -> None:

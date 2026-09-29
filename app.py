@@ -1,9 +1,12 @@
 """Streamlit entry point: run with `streamlit run app.py`."""
 
+from hashlib import sha256
+
 import streamlit as st
 
 from expense_analytics.data import ExpenseValidationError, SAMPLE_PATH, load_expenses
-from expense_analytics.ui import render_csv_guide, render_header, render_preview
+from expense_analytics.ui import render_csv_guide, render_header
+from expense_analytics.dashboard import render_dashboard
 
 
 def main() -> None:
@@ -28,7 +31,7 @@ def main() -> None:
         st.error(str(exc))
         return
     st.success("CSV validated. Your transactions are ready to review.")
-    render_preview(transactions, label)
+    render_dashboard(transactions, label, sha256(content).hexdigest())
 
 
 if __name__ == "__main__":

@@ -7,7 +7,10 @@ from expense_analytics.data import SAMPLE_PATH
 
 
 def render_header() -> None:
-    st.caption("PERSONAL FINANCE · EXPENSE WORKSPACE")
+    st.markdown(
+        '<div class="pea-eyebrow">PERSONAL FINANCE / A CLEARER PICTURE</div>',
+        unsafe_allow_html=True,
+    )
     st.title("Personal Expense Analytics")
     st.write(
         "Understand your spending. Review transactions, explore patterns, and track monthly budgets."
@@ -67,7 +70,7 @@ def render_transactions(transactions: pd.DataFrame) -> None:
 
 def render_about() -> None:
     """Always available, including when the user has no valid dataset loaded."""
-    with st.expander("About this project"):
+    with st.expander("About this project", expanded=True):
         st.caption("Features, methodology, tech stack, and limitations")
         st.caption("A transparent personal finance dashboard")
         with st.expander("Features and methodology"):

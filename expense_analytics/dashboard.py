@@ -12,6 +12,7 @@ from expense_analytics.analytics import (
     top_expenses,
 )
 from expense_analytics.insights import spending_insights
+from expense_analytics.styles import style_chart
 from expense_analytics.ui import render_preview, render_transactions
 
 
@@ -21,7 +22,9 @@ def reset_filters(start, end, categories) -> None:
     st.session_state["expense_categories"] = categories
 
 
-def render_dashboard(frame: pd.DataFrame, source: str, dataset_id: str) -> None:
+def render_dashboard(
+    frame: pd.DataFrame, source: str, dataset_id: str, analytics_panel=None
+) -> None:
     first, last = frame["date"].min().date(), frame["date"].max().date()
     categories = sorted(frame["category"].unique().tolist())
     if st.session_state.get("expense_dataset") != dataset_id or any(
@@ -31,28 +34,36 @@ def render_dashboard(frame: pd.DataFrame, source: str, dataset_id: str) -> None:
         reset_filters(first, last, categories)
         st.session_state["expense_dataset"] = dataset_id
 
-    st.divider()
-    st.subheader("Expense dashboard")
+    st.subheader("Spending at a glance")
     st.caption(
         "All amounts use your file’s currency. Totals and averages include refunds. "
         "Highest and top expenses include positive amounts only."
     )
-    with st.container(border=True):
-        left, middle, right = st.columns([1, 1, 2])
-        with left:
-            start = st.date_input(
-                "Start date", min_value=first, max_value=last, key="expense_start"
+    with st.sidebar:
+        st.divider()
+        st.subheader("Dashboard filters")
+        st.caption("Applies to Overview and Analytics")
+        start = st.date_input("Start date", min_value=first, max_value=last, key="expense_start")
+        end = st.date_input("End date", min_value=first, max_value=last, key="expense_end")
+        selected = st.multiselect("Categories", categories, key="expense_categories")
+        st.button(
+            "Reset filters", on_click=reset_filters, args=(first, last, categories), width="stretch"
+        )
+    if analytics_panel is not None:
+        with analytics_panel:
+            st.subheader("Explore your spending")
+            st.caption(
+                "Category breakdown, monthly trends, and transaction detail · uses sidebar filters."
             )
-        with middle:
-            end = st.date_input("End date", min_value=first, max_value=last, key="expense_end")
-        with right:
-            selected = st.multiselect("Categories", categories, key="expense_categories")
-        st.button("Reset filters", on_click=reset_filters, args=(first, last, categories))
     if start is None or end is None:
         st.info("Select both dates to view your dashboard.")
+        if analytics_panel is not None:
+            analytics_panel.caption("Select both dates in the sidebar to view analytics.")
         return
     if start > end:
         st.error("Start date must be on or before end date.")
+        if analytics_panel is not None:
+            analytics_panel.caption("Correct the date range in the sidebar to view analytics.")
         return
     filtered = filter_transactions(frame, start, end, selected)
     st.caption(
@@ -73,6 +84,10 @@ def render_dashboard(frame: pd.DataFrame, source: str, dataset_id: str) -> None:
     ):
         column.metric(label, value, border=True)
     if filtered.empty:
+        if analytics_panel is not None:
+            analytics_panel.caption(
+                "No matching transactions. Adjust the sidebar filters or reset them."
+            )
         st.info(
             "No transactions match your filters. Select categories, adjust dates, or reset filters."
         )
@@ -83,54 +98,61 @@ def render_dashboard(frame: pd.DataFrame, source: str, dataset_id: str) -> None:
         for insight in spending_insights(filtered):
             st.write(insight)
 
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.subheader("Net spending by category")
-        chart = (
-            alt.Chart(category_breakdown(filtered))
-            .mark_bar(color="#2563EB")
-            .encode(
-                x=alt.X("amount:Q", title="Net spending (file currency)"),
-                y=alt.Y("category:N", sort="-x", title=None),
-                tooltip=[
-                    alt.Tooltip("category:N", title="Category"),
-                    alt.Tooltip("amount:Q", title="Net spending (file currency)", format=",.2f"),
-                ],
+    with analytics_panel if analytics_panel is not None else st.container():
+        left, right = st.columns(2, gap="large")
+        with left, st.container(border=True):
+            st.subheader("Net spending by category")
+            chart = (
+                alt.Chart(category_breakdown(filtered))
+                .mark_bar(color="#087e8b")
+                .encode(
+                    x=alt.X("amount:Q", title="Net spending (file currency)"),
+                    y=alt.Y("category:N", sort="-x", title=None),
+                    tooltip=[
+                        alt.Tooltip("category:N", title="Category"),
+                        alt.Tooltip(
+                            "amount:Q", title="Net spending (file currency)", format=",.2f"
+                        ),
+                    ],
+                )
+                .properties(height=320)
+                .interactive(bind_y=False)
             )
-            .properties(height=320)
-            .interactive()
-        )
-        st.altair_chart(chart, width="stretch")
-    with right:
-        st.subheader("Monthly net spending")
-        trend = (
-            alt.Chart(monthly_spending(filtered, start, end))
-            .mark_line(point=True, color="#2563EB")
-            .encode(
-                x=alt.X("month:T", title="Month", axis=alt.Axis(format="%b %Y", tickCount="month")),
-                y=alt.Y(
-                    "amount:Q", title="Net spending (file currency)", scale=alt.Scale(zero=True)
-                ),
-                tooltip=[
-                    alt.Tooltip("month:T", title="Month", format="%B %Y"),
-                    alt.Tooltip("amount:Q", title="Net spending (file currency)", format=",.2f"),
-                ],
+            st.altair_chart(style_chart(chart), width="stretch", theme=None)
+        with right, st.container(border=True):
+            st.subheader("Monthly net spending")
+            trend = (
+                alt.Chart(monthly_spending(filtered, start, end))
+                .mark_line(point=True, color="#087e8b", strokeWidth=3)
+                .encode(
+                    x=alt.X(
+                        "month:T", title="Month", axis=alt.Axis(format="%b %Y", tickCount="month")
+                    ),
+                    y=alt.Y(
+                        "amount:Q", title="Net spending (file currency)", scale=alt.Scale(zero=True)
+                    ),
+                    tooltip=[
+                        alt.Tooltip("month:T", title="Month", format="%B %Y"),
+                        alt.Tooltip(
+                            "amount:Q", title="Net spending (file currency)", format=",.2f"
+                        ),
+                    ],
+                )
+                .properties(height=320)
+                .interactive()
             )
-            .properties(height=320)
-            .interactive()
-        )
-        st.altair_chart(trend, width="stretch")
+            st.altair_chart(style_chart(trend), width="stretch", theme=None)
+            st.caption(
+                "Each point is a calendar month. Missing months show zero; boundary months reflect selected dates."
+            )
         st.caption(
-            "Each point is a calendar month. Missing months show zero; boundary months reflect selected dates."
+            "Hover for values; scroll to zoom, drag to pan, and double-click to restore chart view."
         )
-    st.caption(
-        "Hover for values; scroll to zoom, drag to pan, and double-click to restore chart view."
-    )
-    st.subheader("Top expenses")
-    top = top_expenses(filtered)
-    if top.empty:
-        st.info("No positive expenses in this selection.")
-    else:
-        st.caption("Up to 10 largest positive transactions in this selection.")
-        render_transactions(top)
-    render_preview(filtered, source)
+        st.subheader("Top expenses")
+        top = top_expenses(filtered)
+        if top.empty:
+            st.info("No positive expenses in this selection.")
+        else:
+            st.caption("Up to 10 largest positive transactions in this selection.")
+            render_transactions(top)
+        render_preview(filtered, source)

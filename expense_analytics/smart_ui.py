@@ -11,6 +11,7 @@ from expense_analytics.budgets import (
     spending_total,
 )
 from expense_analytics.categorization import CATEGORY_RULES, categorize_transactions
+from expense_analytics.styles import style_chart
 
 
 def render_categorization(frame: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
@@ -55,8 +56,7 @@ def _budget_input(label, storage_key, field, widget_key):
 
 
 def render_budgets(frame: pd.DataFrame, dataset_id: str) -> None:
-    st.divider()
-    st.subheader("Monthly budgets")
+    st.subheader("Plan with perspective")
     st.caption(
         "Uses every loaded transaction in the selected calendar month, independently of dashboard "
         "filters. Actual spending is net of refunds. Missing dates may mean the CSV is incomplete; "
@@ -66,12 +66,17 @@ def render_budgets(frame: pd.DataFrame, dataset_id: str) -> None:
         pd.period_range(frame["date"].min(), frame["date"].max(), freq="M").astype(str).tolist()
     )
     month_key = f"budget_month_{dataset_id}"
-    month = st.selectbox("Budget month", months, index=len(months) - 1, key=month_key)
+    with st.sidebar:
+        st.divider()
+        st.subheader("Budget controls")
+        st.caption("Full calendar month · independent of dashboard filters")
+        month = st.selectbox("Budget month", months, index=len(months) - 1, key=month_key)
     storage_key = (dataset_id, month)
     st.session_state.setdefault("expense_budgets", {})
     st.session_state["expense_budgets"].setdefault(storage_key, {})
     saved = st.session_state["expense_budgets"][storage_key]
-    overall = _budget_input("Monthly budget", storage_key, "overall", "monthly_budget_input")
+    with st.sidebar:
+        overall = _budget_input("Monthly budget", storage_key, "overall", "monthly_budget_input")
     monthly = month_transactions(frame, month)
     actual = spending_total(monthly["amount"])
     if monthly.empty:
@@ -96,17 +101,19 @@ def render_budgets(frame: pd.DataFrame, dataset_id: str) -> None:
         )
         st.markdown("**Monthly budget vs. net spending**")
         st.altair_chart(
-            alt.Chart(comparison_chart)
-            .mark_bar(color="#2563EB")
-            .encode(
-                x=alt.X("Amount:Q", title="Amount (file currency)"),
-                y=alt.Y("Measure:N", title=None),
-                tooltip=[
-                    alt.Tooltip("Measure:N", title="Comparison"),
-                    alt.Tooltip("Amount:Q", title="Amount", format=",.2f"),
-                ],
-            )
-            .properties(height=130),
+            style_chart(
+                alt.Chart(comparison_chart)
+                .mark_bar(color="#087e8b")
+                .encode(
+                    x=alt.X("Amount:Q", title="Amount (file currency)"),
+                    y=alt.Y("Measure:N", title=None),
+                    tooltip=[
+                        alt.Tooltip("Measure:N", title="Comparison"),
+                        alt.Tooltip("Amount:Q", title="Amount", format=",.2f"),
+                    ],
+                )
+                .properties(height=180)
+            ),
             width="stretch",
         )
     with st.expander("Category budgets and analysis"):
@@ -116,10 +123,14 @@ def render_budgets(frame: pd.DataFrame, dataset_id: str) -> None:
         category_key = f"budget_category_{dataset_id}"
         if st.session_state.get(category_key) not in available:
             st.session_state[category_key] = available[0]
-        category = st.selectbox("Budget category", available, key=category_key)
-        _budget_input(
-            "Category monthly budget", storage_key, ("category", category), "category_budget_input"
-        )
+        with st.sidebar:
+            category = st.selectbox("Budget category", available, key=category_key)
+            _budget_input(
+                "Category monthly budget",
+                storage_key,
+                ("category", category),
+                "category_budget_input",
+            )
         category_budgets = {
             key[1]: value
             for key, value in saved.items()

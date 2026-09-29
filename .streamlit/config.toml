@@ -1,10 +1,17 @@
 [theme]
 base = "light"
-primaryColor = "#2563EB"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F3F6FA"
-textColor = "#172033"
+primaryColor = "#087E8B"
+backgroundColor = "#F5F8FA"
+secondaryBackgroundColor = "#EDF2F6"
+textColor = "#172E40"
 font = "sans serif"
+borderColor = "#DCE5ED"
+baseRadius = "0.75rem"
+dataframeHeaderBackgroundColor = "#EDF2F6"
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F6F8"
 
 [server]
 maxUploadSize = 5

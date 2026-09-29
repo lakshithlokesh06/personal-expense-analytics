@@ -17,7 +17,7 @@ def render_csv_guide() -> None:
         st.markdown(
             "Include **date**, **description**, **category**, and **amount** columns. "
             "Use dates in **YYYY-MM-DD** format and plain numeric amounts, "
-            "such as **24.50**. All four fields are required for every transaction."
+            "such as **24.50**. Date, description, and amount are required. Category may be omitted or blank; keyword rules will fill it when possible."
         )
         st.code("date,description,category,amount\n2026-09-01,Weekly groceries,Groceries,64.80", language="csv")
         st.caption(

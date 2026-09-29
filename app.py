@@ -7,6 +7,7 @@ import streamlit as st
 from expense_analytics.data import ExpenseValidationError, SAMPLE_PATH, load_expenses
 from expense_analytics.ui import render_csv_guide, render_header
 from expense_analytics.dashboard import render_dashboard
+from expense_analytics.smart_ui import render_categorization, render_budgets
 
 
 def main() -> None:
@@ -31,7 +32,10 @@ def main() -> None:
         st.error(str(exc))
         return
     st.success("CSV validated. Your transactions are ready to review.")
-    render_dashboard(transactions, label, sha256(content).hexdigest())
+    dataset_id = sha256(content).hexdigest()
+    transactions, replace = render_categorization(transactions)
+    render_dashboard(transactions, label, f"{dataset_id}:{replace}")
+    render_budgets(transactions, dataset_id)
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ def load_expenses(content: bytes) -> pd.DataFrame:
         columns = [name.strip().lower() for name in header]
         if any(not name for name in columns) or len(columns) != len(set(columns)):
             raise ExpenseValidationError("Column names must be non-empty and unique.")
-        missing = set(REQUIRED_COLUMNS) - set(columns)
+        missing = (set(REQUIRED_COLUMNS) - {"category"}) - set(columns)
         if missing:
             raise ExpenseValidationError(f"Missing required columns: {', '.join(sorted(missing))}.")
         rows = []
@@ -55,8 +55,12 @@ def load_expenses(content: bytes) -> pd.DataFrame:
 
     if not rows:
         raise ExpenseValidationError("The CSV contains headers but no transactions.")
-    frame = pd.DataFrame(rows, columns=columns).loc[:, list(REQUIRED_COLUMNS)]
+    frame = pd.DataFrame(rows, columns=columns)
+    if "category" not in frame:
+        frame["category"] = "Uncategorized"
+    frame = frame.loc[:, list(REQUIRED_COLUMNS)]
     frame = frame.apply(lambda column: column.str.strip())
+    frame["category"] = frame["category"].replace("", "Uncategorized")
     errors = []
     for column in REQUIRED_COLUMNS:
         blank = frame[column].eq("")

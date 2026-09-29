@@ -8,6 +8,7 @@ from expense_analytics.analytics import (
     category_breakdown, filter_transactions, monthly_spending, summarize, top_expenses,
 )
 from expense_analytics.ui import render_preview
+from expense_analytics.insights import spending_insights
 
 
 def reset_filters(start, end, categories) -> None:
@@ -58,6 +59,11 @@ def render_dashboard(frame: pd.DataFrame, source: str, dataset_id: str) -> None:
     if filtered.empty:
         st.info("No transactions match your filters. Select categories, adjust dates, or reset filters.")
         return
+
+    with st.expander("Spending insights", expanded=True):
+        st.caption("Observations from your current dashboard selection.")
+        for insight in spending_insights(filtered):
+            st.write(insight)
 
     left, right = st.columns(2)
     with left:
